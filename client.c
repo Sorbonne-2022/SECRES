@@ -7,15 +7,19 @@
 #include <string.h>
 
 #define PORT 1234
-#define SERVER_IP "132.227.114.35"
+#define SERVER_IP "132.227.114.36"
 
 #define IS_DEBUG 0
 #define DEBUG(s) if (IS_DEBUG) {s;}
 
 const char *HELLO = "0x22222222";
 const char *RETURN_HELLO = "0x01";
-//char CHALLENGE = "";
 
+const uint32_t HELLO_CODE = 0x22222222;
+const uint8_t RETURN_CODE = 0x01;
+
+//char CHALLENGE = "";
+const char *username = "user123";
 const char *PASSWORD_TEST = "azerty";
 
 int main(int argc, char const *argv[]) 
@@ -42,14 +46,18 @@ int main(int argc, char const *argv[])
     printf("init client...\n");
 
     //Send a message
-    send(socketFd, HELLO, strlen(HELLO), 0);
+    printf("Sending to Server [%s]\n", HELLO);
+    //send(socketFd, HELLO, strlen(HELLO), 0);
+    send(socketFd, (char*)&HELLO_CODE, strlen((char*)&HELLO_CODE), 0);
 
     //Receive a message from server
     read(socketFd, buffer, 1024);
 
-    if (strncmp(buffer, RETURN_HELLO, strlen(RETURN_HELLO)) == 0) {
+    if (*((uint8_t*)buffer) == RETURN_CODE) {
+        printf("Received [%s]\n", RETURN_HELLO);
         //Send a message
-        send(socketFd, "user123", 6, 0);
+        printf("Sending Username [%s]\n", username);
+        send(socketFd, username, 7, 0);
         bzero(buffer, 1024);
         //Receive token from server
         read(socketFd, buffer, 1024);
@@ -60,6 +68,7 @@ int main(int argc, char const *argv[])
         strcat(nbuffer, PASSWORD_TEST);
 
         //Send password
+        printf("Sending Password with Salt [%s]\n", nbuffer);
         send(socketFd, nbuffer, strlen(nbuffer), 0);
 
         bzero(buffer, 1024);
