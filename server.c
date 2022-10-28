@@ -7,12 +7,17 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <openssl/sha.h>
 
-#define PORT 1234
+#define PORT 12345
 #define SERVER_IP "132.227.114.36"
 
 #define IS_DEBUG 0
 #define DEBUG(s) if (IS_DEBUG) {s;}
+
+SHA256_CTX ctx;
+unsigned char SHA_buffer[32];
+
 
 const char *HELLO = "0x22222222";
 const char *RETURN_HELLO = "0x01";
@@ -71,23 +76,28 @@ int main(int argc, char const *argv[])
         //Send challenge
         char CHALLENGE[16] = {0};
         for(int i = 0;i < 16;i++) {
-            CHALLENGE[i] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[rand () % 26];
+            CHALLENGE[i] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[random () % 26];
         }
         printf("Challenge generated [%s]\n", CHALLENGE);
         send(clientFd, CHALLENGE, strlen(CHALLENGE), 0);
-
         
+        //Hashing sha256
+        SHA256_Init(&ctx);
+        SHA256_Update(&ctx, PASSWORD_TEST, 32);
+        SHA256_Final(SHA_buffer, &ctx);
+
         char nbuffer[4096] = {0};
         //printf("---->[%s]", nbuffer);
         strncat(nbuffer, CHALLENGE, strlen(CHALLENGE));
         //printf("-->[%s]", nbuffer);
-        strncat(nbuffer, PASSWORD_TEST, strlen(PASSWORD_TEST));
+        strncat(nbuffer, SHA_buffer, strlen(SHA_buffer));
         
         //Receive a message from client
         read(clientFd, passwordHashed, 1024);
-        //printf("[%s] %d == [%s] %d\n", nbuffer, strlen(nbuffer), passwordHashed, strlen(passwordHashed));
+        printf("[%s] %d == [%s] %d\n", nbuffer, strlen(nbuffer), passwordHashed, strlen(passwordHashed));
         printf("Received password Hashed with challenge [%s]\n", passwordHashed);
-        
+                
+
         if (strncmp(passwordHashed, nbuffer, strlen(passwordHashed)) == 0) {
             send(clientFd, "OK", 2, 0);
         } else {
