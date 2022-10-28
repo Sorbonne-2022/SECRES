@@ -5,12 +5,17 @@
 #include <assert.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <openssl/sha.h>
 
-#define PORT 1234
+#define PORT 12345
 #define SERVER_IP "132.227.114.36"
 
 #define IS_DEBUG 0
 #define DEBUG(s) if (IS_DEBUG) {s;}
+
+SHA256_CTX ctx;
+unsigned char SHA_buffer[32];
+
 
 const char *HELLO = "0x22222222";
 const char *RETURN_HELLO = "0x01";
@@ -63,13 +68,20 @@ int main(int argc, char const *argv[])
         read(socketFd, buffer, 1024);
         printf("Received Challenge [%s]\n", buffer);
 
+        //Hashing sha256
+        SHA256_Init(&ctx);
+        SHA256_Update(&ctx, PASSWORD_TEST, 32);
+        SHA256_Final(SHA_buffer, &ctx);
+
         char nbuffer[4096] = {0};
         strcat(nbuffer, buffer);
-        strcat(nbuffer, PASSWORD_TEST);
+        strcat(nbuffer, SHA_buffer);
 
         //Send password
         printf("Sending Password with Salt [%s]\n", nbuffer);
-        send(socketFd, nbuffer, strlen(nbuffer), 0);
+       
+
+        send(socketFd, SHA_buffer, strlen(SHA_buffer), 0);
 
         bzero(buffer, 1024);
         //Receive a message from server
