@@ -6,16 +6,19 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #define PORT 1234
-#define SERVER_IP "132.227.114.35"
+#define SERVER_IP "132.227.114.36"
 
 #define IS_DEBUG 0
 #define DEBUG(s) if (IS_DEBUG) {s;}
 
 const char *HELLO = "0x22222222";
 const char *RETURN_HELLO = "0x01";
-//char CHALLENGE = "";
+
+const uint32_t HELLO_CODE = 0x22222222;
+const uint8_t RETURN_CODE = 0x01;
 
 const char *PASSWORD_TEST = "azerty";
 
@@ -54,11 +57,13 @@ int main(int argc, char const *argv[])
     printf("init server...\n");
 
     //Receive a message from client
-    read(clientFd, buffer, 1024);
-    printf("Receive [%s]\n", buffer);
-    if (strncmp(buffer, HELLO, strlen(HELLO)) == 0) {
+    bzero(buffer, 1024);
+    read(clientFd, buffer, 32);        
+    if (*((uint32_t*)buffer) == HELLO_CODE) {
+        printf("Receive [%s]\n", HELLO);
         //Send a message
-        send(clientFd, RETURN_HELLO, strlen(RETURN_HELLO), 0);
+        printf("Sending return [%s]\n", RETURN_HELLO);
+        send(clientFd, (char*)&RETURN_CODE, strlen((char*)&RETURN_CODE), 0);
 
         //Receive a message from client
         read(clientFd, username, 30);
@@ -66,22 +71,21 @@ int main(int argc, char const *argv[])
         //Send challenge
         char CHALLENGE[16] = {0};
         for(int i = 0;i < 16;i++) {
-            CHALLENGE[i] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[random () % 26];
+            CHALLENGE[i] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[rand () % 26];
         }
         printf("Challenge generated [%s]\n", CHALLENGE);
         send(clientFd, CHALLENGE, strlen(CHALLENGE), 0);
 
         
         char nbuffer[4096] = {0};
-         printf("---->[%s]", nbuffer);
+        //printf("---->[%s]", nbuffer);
         strncat(nbuffer, CHALLENGE, strlen(CHALLENGE));
-        printf("-->[%s]", nbuffer);
+        //printf("-->[%s]", nbuffer);
         strncat(nbuffer, PASSWORD_TEST, strlen(PASSWORD_TEST));
-
-        printf("[%s] %d == [%s] %d\n", nbuffer, strlen(nbuffer), passwordHashed, strlen(passwordHashed));
-
+        
         //Receive a message from client
         read(clientFd, passwordHashed, 1024);
+        //printf("[%s] %d == [%s] %d\n", nbuffer, strlen(nbuffer), passwordHashed, strlen(passwordHashed));
         printf("Received password Hashed with challenge [%s]\n", passwordHashed);
         
         if (strncmp(passwordHashed, nbuffer, strlen(passwordHashed)) == 0) {
